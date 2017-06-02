@@ -19,8 +19,8 @@
        :no-op))))
 
 (defn- trigger-stop
-  [stop-chan]
-  (async/put! stop-chan :stop))
+  [component]
+  (async/put! (:stop-chan component) :stop))
 
 ;;;;;;;;;;;;;;;
 ;; Component
@@ -30,24 +30,15 @@
   component/Lifecycle
 
   (start [this]
-    (listen this input-chan output-chan stop-chan work-fn)
-    this)
+    (let [stop-chan (async/chan 1)]
+      (listen this input-chan output-chan stop-chan work-fn)
+      (assoc this
+             :stop-chan stop-chan)))
 
   (stop [this]
-    (trigger-stop stop-chan)
+    (trigger-stop this)
     (assoc this
            :input-chan nil
            :output-chan nil
            :stop-chan nil
            :work-fn nil)))
-
-;;;;;;;;;;;;;;;
-;; Public
-;;;;;;;;;;;;;;;
-(defn new-instance
-  [{:keys [input-chan output-chan work-fn]}]
-  (map->Worker
-    {:input-chan input-chan
-     :output-chan output-chan
-     :stop-chan (async/chan 1)
-     :work-fn work-fn}))

@@ -10,7 +10,7 @@
 
 (defn start-system
   [config]
-  (component/start (new-instance config)))
+  (component/start (map->Worker config)))
 
 (deftest worker-test
   (testing "testing worker input/output"
