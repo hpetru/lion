@@ -5,12 +5,23 @@
 ;;;;;;;;;;;;;;;
 ;; Private
 ;;;;;;;;;;;;;;;
-; TODO: MQ open
-(defn- connect-to-queue [config]
+; TODO:
+(defn- connect-to-queue
+  [config]
   )
 
-; TODO: MQ close
-(defn- close-connection [conn]
+; TODO:
+(defn- close-connection
+  [conn]
+  )
+
+; TODO:
+(defn- subscribe-to-queue
+  [conn config handler]
+  )
+
+(defn- publish-to-queue
+  [conn conn config msg]
   )
 
 (defn- listen
