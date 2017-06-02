@@ -12,8 +12,7 @@
       input-chan
       ([result]
        (async/put! result-chan (work-fn component result))
-       ; issue here
-       recur)
+       (recur))
 
       stop-chan
       ([_]
