@@ -4,14 +4,20 @@
             [clojure.core.async :as async]
             [com.stuartsierra.component :as component]))
 
+(defn rand-str [len]
+  (apply str (take len (repeatedly #(char (+ (rand 26) 65))))))
+
 (defn start-system
   [config]
   (component/start (map->Queue config)))
 
 (deftest queue-test
   (testing "testing queue input/output"
-    (let [config {:input-queue-name "macaronic"
-                  :output-queue-name "macaronic"}
+    (let [queue-name (rand-str 6)
+          config {:input-queue-name queue-name
+                  :input-queue-config {:exclusive true :auto-delete true}
+                  :output-queue-name queue-name
+                  :output-queue-config {:exclusive true :auto-delete true}}
           incoming-chan (async/chan)
           outgoing-chan (async/chan)
           _ (start-system {:incoming-chan incoming-chan

@@ -26,19 +26,18 @@
   (langohr.channel/open conn))
 
 (defn- declare-queue
-  [channel queue-name]
+  [channel queue-name queue-config]
   (langohr.queue/declare
     channel
     queue-name
-    {:exclusive false
-     :auto-delete false}))
+    queue-config))
 
 (defn- handler-wrapper
   [handler]
   (fn
     [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
-    (let [str-payload (String. payload "UTF-8")
-          json (cheshire/parse-string str-payload)]
+    (let [payload-str (String. payload "UTF-8")
+          json (cheshire/parse-string payload-str)]
       (handler json))))
 
 ; TODO:
@@ -46,7 +45,8 @@
   [channel config handler]
   (declare-queue
     channel
-    (:input-queue-name config))
+    (:input-queue-name config)
+    (:input-queue-config config))
   (langohr.consumers/subscribe
     channel
     (:input-queue-name config)
@@ -56,7 +56,8 @@
   [channel config msg]
   (declare-queue
     channel
-    (:output-queue-name config))
+    (:output-queue-name config)
+    (:output-queue-config config))
 
   (langohr.basic/publish
     channel
