@@ -1,4 +1,4 @@
-(ns lion.worker-test
+(ns lion.queue-test
   (:require [clojure.test :refer :all]
             [lion.queue :refer :all]
             [clojure.core.async :as async]
@@ -8,14 +8,15 @@
   [config]
   (component/start (map->Queue config)))
 
-(deftest worker-test
+(deftest queue-test
   (testing "testing queue input/output"
-    (let [config {}
-          input-chan (async/chan)
-          output-chan (async/chan)
+    (let [config {:input-queue-name "macaronic"
+                  :output-queue-name "macaronic"}
+          incoming-chan (async/chan)
+          outgoing-chan (async/chan)
           _ (start-system {:incoming-chan incoming-chan
-                           :outgoing-chan output-chan
+                           :outgoing-chan outgoing-chan
                            :config config})
-          result (future (async/<!! outgoing-chan))]
-      (async/put! input-chan 1)
+          result (future (async/<!! incoming-chan))]
+      (async/put! incoming-chan 2)
       (is (= @result 2)))))

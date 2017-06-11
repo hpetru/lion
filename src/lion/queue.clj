@@ -1,6 +1,12 @@
 (ns lion.queue
   (:require [com.stuartsierra.component :as component]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async]
+            [langohr.core]
+            [langohr.channel]
+            [langohr.queue]
+            [langohr.consumers]
+            [langohr.basic]
+            [cheshire.core :as cheshire]))
 
 ;;;;;;;;;;;;;;;
 ;; Private
@@ -8,37 +14,74 @@
 ; TODO:
 (defn- connect-to-queue
   [config]
-  )
+  (langohr.core/connect))
 
 ; TODO:
 (defn- close-connection
   [conn]
-  )
+  (langohr.core/close conn))
+
+(defn- create-channel
+  [conn]
+  (langohr.channel/open conn))
+
+(defn- declare-queue
+  [channel queue-name]
+  (langohr.queue/declare
+    channel
+    queue-name
+    {:exclusive false
+     :auto-delete false}))
+
+(defn- handler-wrapper
+  [handler]
+  (fn
+    [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
+    (let [str-payload (String. payload "UTF-8")
+          json (cheshire/parse-string str-payload)]
+      (handler json))))
 
 ; TODO:
 (defn- subscribe-to-queue
-  [conn config handler]
-  )
+  [channel config handler]
+  (declare-queue
+    channel
+    (:input-queue-name config))
+  (langohr.consumers/subscribe
+    channel
+    (:input-queue-name config)
+    (handler-wrapper handler)))
 
 (defn- publish-to-queue
-  [conn conn config msg]
-  )
+  [channel config msg]
+  (declare-queue
+    channel
+    (:output-queue-name config))
+
+  (langohr.basic/publish
+    channel
+    ""
+    (:output-queue-name config)
+    (cheshire/generate-string msg)))
 
 (defn- listen
   [conn config incoming-chan outgoing-chan stop-chan]
-  (subscribe-to-queue conn config
+  (subscribe-to-queue
+    (create-channel conn)
+    config
     (fn message-handler [msg]
       (async/put! incoming-chan msg)))
-  (async/go-loop []
-    (async/alt!
+  (let [channel (create-channel conn)]
+    (async/go-loop []
+      (async/alt!
 
-      outgoing-chan
-      ([msg]
-       (publish-to-queue conn config msg))
+        outgoing-chan
+        ([msg]
+         (publish-to-queue channel config msg))
 
-      stop-chan
-      ([_]
-       :no-op))))
+        stop-chan
+        ([_]
+         :no-op)))))
 
 (defn- trigger-stop
   [component]
