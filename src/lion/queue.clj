@@ -11,12 +11,10 @@
 ;;;;;;;;;;;;;;;
 ;; Private
 ;;;;;;;;;;;;;;;
-; TODO:
 (defn- connect-to-queue
   [config]
   (langohr.core/connect))
 
-; TODO:
 (defn- close-connection
   [conn]
   (langohr.core/close conn))
@@ -40,7 +38,6 @@
           json (cheshire/parse-string payload-str)]
       (handler json))))
 
-; TODO:
 (defn- subscribe-to-queue
   [channel config handler]
   (declare-queue
