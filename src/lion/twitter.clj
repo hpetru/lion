@@ -49,7 +49,7 @@
 ;;;;;;;;;;;;;;;
 
 (defn twitter-streamer-worker
-  [component value callback]
+  [component value result-chan]
   (let [restart-queue (:restart-queue component)
         restart-chan (:incoming-chan restart-queue)
 
@@ -63,8 +63,3 @@
     (async/<!! restart-chan)
     (println "Stopping twitter streaming ...")
     (twitter-streaming-stop @streamer)))
-
-(defn twitter-puller-worker
-  [component value callback]
-  (println " twitter streaming ..."))
-

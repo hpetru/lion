@@ -5,24 +5,31 @@
 ;;;;;;;;;;;;;;;
 ;; Private
 ;;;;;;;;;;;;;;;
+(defn- perform-work
+  [component payload work-fn callback-fn]
+  (println "Starting working ...")
+  (work-fn component payload callback-fn)
+  (println "Work done ..."))
+
+(defn- ack-work
+  [delivery-tag ack-chan]
+  (when ack-chan
+    (async/>! ack-chan delivery-tag)))
+
+
 (defn- listen
-  [component input-chan result-chan ack-chan stop-chan work-fn]
+  [component work-fn input-chan result-chan ack-chan stop-chan]
   (async/go-loop []
     (async/alt!
-      ; TODO: move to own function
       input-chan
-      ([[delivery-tag result]]
+      ([[delivery-tag payload]]
+       (perform-work component
+                     payload
+                     work-fn
+                     #(async/>!! result-chan %))
 
-       (println "Received work ... calling handler")
-       (work-fn
-         component
-         result
-         (fn callback-fn [value] (async/>!! result-chan value)))
-
-       (println "Work done ... sending delivery-tag to ack")
-
-       (when ack-chan
-         (async/>! ack-chan delivery-tag))
+       (ack-work delivery-tag
+                 ack-chan)
        (recur))
 
       stop-chan
@@ -46,11 +53,11 @@
           output-chan (:outgoing-chan queue)
           ack-chan (:ack-chan queue)]
       (listen this
+              work-fn
               input-chan
               output-chan
               ack-chan
-              stop-chan
-              work-fn)
+              stop-chan)
       (assoc this
              :stop-chan stop-chan)))
 
