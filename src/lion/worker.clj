@@ -9,6 +9,7 @@
   [component input-chan result-chan ack-chan stop-chan work-fn]
   (async/go-loop []
     (async/alt!
+      ; TODO: move to own function
       input-chan
       ([[delivery-tag result]]
 
@@ -16,10 +17,12 @@
        (work-fn
          component
          result
-         (fn callback-fn [value] (async/>! result-chan value)))
+         (fn callback-fn [value] (async/>!! result-chan value)))
 
        (println "Work done ... sending delivery-tag to ack")
-       (async/>! ack-chan delivery-tag)
+
+       (when ack-chan
+         (async/>! ack-chan delivery-tag))
        (recur))
 
       stop-chan
@@ -34,11 +37,14 @@
 ;; Component
 ;;;;;;;;;;;;;;;
 (defrecord Worker
-  [input-chan output-chan stop-chan ack-chan work-fn]
+  [queue work-fn]
   component/Lifecycle
 
   (start [this]
-    (let [stop-chan (async/chan 1)]
+    (let [stop-chan (async/chan 1)
+          input-chan (:incoming-chan queue)
+          output-chan (:outgoing-chan queue)
+          ack-chan (:ack-chan queue)]
       (listen this
               input-chan
               output-chan
@@ -51,8 +57,5 @@
   (stop [this]
     (trigger-stop this)
     (assoc this
-           :input-chan nil
-           :output-chan nil
-           :ack-chan nil
            :stop-chan nil
            :work-fn nil)))

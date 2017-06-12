@@ -16,9 +16,9 @@
   (testing "testing worker input/output"
     (let [input-chan (async/chan)
           output-chan (async/chan)
-          _ (start-system {:input-chan input-chan
-                            :output-chan output-chan
+          _ (start-system {:queue {:incoming-chan input-chan
+                                   :outgoing-chan output-chan}
                             :work-fn dumb-worker-fn})
           result (future (async/<!! output-chan))]
-      (async/put! input-chan 1)
+      (async/>!! input-chan ["abc" 1])
       (is (= @result 2)))))

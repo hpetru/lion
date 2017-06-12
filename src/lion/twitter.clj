@@ -12,7 +12,7 @@
 (defn- twitter-streaming-start
   [users client]
   (twitter.api.streaming/statuses-filter
-    :params {:track "love"}
+    :params {:track "dd"}
     :oauth-creds (:oauth-creds client)
     ; TODO: real callbacks here
     :callbacks
@@ -50,7 +50,9 @@
 
 (defn twitter-streamer-worker
   [component value callback]
-  (let [restart-chan (:restart-chan component)
+  (let [restart-queue (:restart-queue component)
+        restart-chan (:incoming-chan restart-queue)
+
         client (:client component)
         users value
         streamer (delay (twitter-streaming-start users client))]

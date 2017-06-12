@@ -39,18 +39,24 @@
       (handler delivery-tag data))))
 
 (defn- subscribe-to-queue
-  [channel config handler]
+  [channel config auto-ack handler]
+  ; Declare queue
   (declare-queue
     channel
     (:input-queue-name config)
     (:input-queue-config config))
-  ; TODO
-  (langohr.basic/qos channel 1)
+
+  ; Setup QOS
+  (langohr.basic/qos
+    channel
+    (:input-qos-prefetch config 8))
+
+  ; Subscribe
   (langohr.consumers/subscribe
     channel
     (:input-queue-name config)
     (handler-wrapper handler)
-    {:auto-ack false}))
+    {:auto-ack auto-ack}))
 
 (defn- publish-to-queue
   [channel config msg]
@@ -67,10 +73,11 @@
     (cheshire/generate-string msg)))
 
 (defn- put-msgs-to-incoming-chan
-  [channel config incoming-chan]
+  [channel config incoming-chan auto-ack]
   (subscribe-to-queue
     channel
     config
+    auto-ack
     (fn message-handler [delivery-tag msg]
       (println "Received msg ... putting to incoming-chan")
       (async/>!! incoming-chan [delivery-tag msg]))))
@@ -88,15 +95,18 @@
 
   ; redirect to incoming-chan and
   ; ack from ack-chan
-  (let [channel (create-channel conn)]
+  (let [channel (create-channel conn)
+        auto-ack (nil? ack-chan)]
     (put-msgs-to-incoming-chan
       channel
       config
-      incoming-chan)
+      incoming-chan
+      auto-ack)
 
-    (ack-msgs-from-ack-chan
-      channel
-      ack-chan))
+    (when-not auto-ack
+      (ack-msgs-from-ack-chan
+        channel
+        ack-chan)))
 
   ; publish messages
   (let [channel (create-channel conn)]

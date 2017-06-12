@@ -10,6 +10,7 @@
 
  :twitter-streamer-queue {:input-queue-name "lion.twitter.streamer"
                           :input-queue-config {:durable true :auto-delete false}
+                          :input-qos-prefetch 1
                           :output-queue-name "lion.twitter.posts"
                           :output-queue-config {}}
 
