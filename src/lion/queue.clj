@@ -31,12 +31,12 @@
     queue-config))
 
 (defn- handler-wrapper
-  [handler]
+  [channel handler]
   (fn
     [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
     (let [payload-str (String. payload "UTF-8")
-          json (cheshire/parse-string payload-str)]
-      (handler json))))
+          data (cheshire/parse-string payload-str)]
+      (handler channel delivery-tag data))))
 
 (defn- subscribe-to-queue
   [channel config handler]
@@ -47,7 +47,8 @@
   (langohr.consumers/subscribe
     channel
     (:input-queue-name config)
-    (handler-wrapper handler)))
+    (handler-wrapper channel handler)
+    {:auto-ack false}))
 
 (defn- publish-to-queue
   [channel config msg]
@@ -67,8 +68,10 @@
   (subscribe-to-queue
     (create-channel conn)
     config
-    (fn message-handler [msg]
-      (async/put! incoming-chan msg)))
+    (fn message-handler [channel delivery-tag msg]
+      (println "Received msg ... putting to incoming-chan")
+      (async/>!! incoming-chan msg)
+      (langohr.basic/ack channel delivery-tag)))
   (let [channel (create-channel conn)]
     (async/go-loop []
       (async/alt!
@@ -83,7 +86,7 @@
 
 (defn- trigger-stop
   [component]
-  (async/put! (:stop-chan component) :stop))
+  (async/>!! (:stop-chan component) :stop))
 
 ;;;;;;;;;;;;;;;
 ;; Component

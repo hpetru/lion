@@ -1,0 +1,26 @@
+{:facebook-puller-queue {:input-queue-name "lion.facebook.puller"
+                         :input-queue-config {}
+                         :output-queue-name "lion.facebook.posts"
+                         :output-queue-config {}}
+
+ :twitter-puller-queue {:input-queue-name "lion.twitter.puller"
+                        :input-queue-config {}
+                        :output-queue-name "lion.twitter.posts"
+                        :output-queue-config {}}
+
+ :twitter-streamer-queue {:input-queue-name "lion.twitter.streamer"
+                          :input-queue-config {}
+                          :output-queue-name "lion.twitter.posts"
+                          :output-queue-config {}}
+
+ :twitter-streamer-restart-queue {:input-queue-name "lion.twitter.streamer.restart"
+                                  :input-queue-config {}
+                                  :output-queue-name "dumb"
+                                  :output-queue-config {}}
+
+ :twitter-client {:app-consumer-key "mjG24QCOy5H78ndMdohLJ06hd"
+                  :app-consumer-secret "lZBrtN7gvB1tsLQyYGQeoHkFfNHCkpCtBmhO1oVwE3HVxHEPmO"
+                  :user-access-token "279514082-9NuRrFuJTufJaQYMMXuDxGbRiQpOyWbNEWL2aOuX"
+                  :user-access-token-secret "6qOHa7qtfNciQuYEp20I5Zc56kPBIzxR8pWYqzd1Y92Vo"}
+ :facebook-client {}
+}

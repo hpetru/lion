@@ -5,8 +5,8 @@
             [com.stuartsierra.component :as component]))
 
 (defn dumb-worker-fn
-  [component value]
-  (+ value 1))
+  [component value callback]
+  (callback (+ value 1)))
 
 (defn start-system
   [config]

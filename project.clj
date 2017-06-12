@@ -8,6 +8,7 @@
                  [com.stuartsierra/component "0.3.2"]
                  [com.novemberain/langohr "3.6.1"]
                  [cheshire "5.7.1"]
+                 [twitter-api "1.8.0"]
 
                  [org.clojure/tools.namespace "0.2.11"]]
   :main ^:skip-aot lion.bin

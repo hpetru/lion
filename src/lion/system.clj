@@ -3,26 +3,17 @@
             [clojure.core.async :as async]
             [lion.worker :refer [map->Worker]]
             [lion.queue :refer [map->Queue]]
-            ; [lion.facebook :refer [map->Facebook facebook-puller]]
-            ; [lion.twitter :refer [map->Twitter twitter-puller twitter-streamer]]
-            ))
-
-; Dummy functions
-(defn facebook-puller
-  [component value]
-  )
-
-(defn twitter-puller
-  [component value]
-  )
-
-(defn twitter-streamer
-  [component value]
-  (let [restart-chan (:restart-chan component)]
-    ; Check if you receive any messages here from restart chan
-    ; and stop streamer
-    )
-  )
+            [lion.facebook :refer [map->Facebook
+                                   facebook-puller-worker]]
+            [lion.twitter :refer [map->Twitter
+                                  twitter-streamer-worker
+                                  twitter-puller-worker]]
+            [twitter.oauth]
+            [twitter.callbacks]
+            [twitter.callbacks.handlers]
+            [twitter.api.streaming]
+            )
+  (:import [twitter.callbacks.protocols AsyncStreamingCallback]))
 
 (defn system
   [config]
@@ -48,7 +39,7 @@
     ; Channels for twitter streamer
     ; ------------------------------
     :twitter-streamer-input-chan
-    (async/chan 1)
+    (async/chan)
 
     :twitter-streamer-output-chan
     (async/chan 8)
@@ -62,47 +53,45 @@
     ; ------------------------------
     :facebook-puller-queue
     (component/using
-      (map->Queue (:twitter-puller-queue config))
-      {:incoming-chan :facebook-puller-output-chan
-       :outgoing-chan :facebook-puller-input-chan})
+      (map->Queue {:config (:facebook-puller-queue config)})
+      {:incoming-chan :facebook-puller-input-chan
+       :outgoing-chan :facebook-puller-output-chan})
 
 
     ; ------------------------------
     :twitter-puller-queue
     (component/using
-      (map->Queue (:twitter-puller-queue config))
-      {:incoming-chan :twitter-puller-output-chan
-       :outgoing-chan :twitter-streamer-input-chan})
+      (map->Queue {:config (:twitter-puller-queue config)})
+      {:incoming-chan :twitter-puller-input-chan
+       :outgoing-chan :twitter-puller-output-chan})
 
     ; ------------------------------
     :twitter-streamer-queue
     (component/using
-      (map->Queue (:twitter-streamer-queue config))
-      {:incoming-chan :twitter-streamer-output-chan
-       :outgoing-chan :twitter-streamer-input-chan})
+      (map->Queue {:config (:twitter-streamer-queue config)})
+      {:incoming-chan :twitter-streamer-input-chan
+       :outgoing-chan :twitter-streamer-output-chan})
 
     ;------------------------------
     :twitter-streamer-restart-queue
     (component/using
-      (map->Queue (:twitter-streamer-restart-queue config))
-      {:incoming-chan :twitter-streamer-restart-chan
-       :outgoing-chan (async/chan)})
+      (map->Queue {:config (:twitter-streamer-restart-queue config)
+                   :outgoing-chan (async/chan)})
+      {:incoming-chan :twitter-streamer-restart-chan})
 
     ; ------------------------------
     :twitter-client
-    (assoc :twitter-client true)
-    ;(map->Twitter (:twitter-client config))
+    (map->Twitter {:config (:twitter-client config)})
 
     ; ------------------------------
     :facebook-client
-    (assoc :facebook-client true)
-    ;(map->Facebook (:facebook-client config))
+    (map->Facebook {:config (:facebook-client config)})
 
     ; Facebook puller
     ; ------------------------------
     :worker-facebook-puller
     (component/using
-      (map->Worker {:work-fn facebook-puller})
+      (map->Worker {:work-fn facebook-puller-worker})
       {:input-chan :facebook-puller-input-chan
        :output-chan :facebook-puller-output-chan
        :client :facebook-client})
@@ -111,7 +100,7 @@
     ; ------------------------------
     :worker-twitter-puller
     (component/using
-      (map->Worker {:work-fn twitter-puller})
+      (map->Worker {:work-fn twitter-puller-worker})
       {:input-chan :twitter-puller-input-chan
        :output-chan :twitter-puller-output-chan
        :client :twitter-client})
@@ -120,7 +109,7 @@
     ; ------------------------------
     :worker-twitter-streamer
     (component/using
-      (map->Worker {:work-fn twitter-streamer})
+      (map->Worker {:work-fn twitter-streamer-worker})
       {:input-chan :twitter-streamer-input-chan
        :output-chan :twitter-streamer-output-chan
        :restart-chan :twitter-streamer-restart-chan

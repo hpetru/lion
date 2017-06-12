@@ -11,7 +11,11 @@
     (async/alt!
       input-chan
       ([result]
-       (async/put! result-chan (work-fn component result))
+       (println "Received work")
+       (work-fn
+         component
+         result
+         (fn callback-fn [value] (async/put! result-chan value)))
        (recur))
 
       stop-chan
@@ -31,7 +35,11 @@
 
   (start [this]
     (let [stop-chan (async/chan 1)]
-      (listen this input-chan output-chan stop-chan work-fn)
+      (listen this
+              input-chan
+              output-chan
+              stop-chan
+              work-fn)
       (assoc this
              :stop-chan stop-chan)))
 
