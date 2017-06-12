@@ -12,7 +12,7 @@
 (defn- twitter-streaming-start
   [users client]
   (twitter.api.streaming/statuses-filter
-    :params {:track "guguta"}
+    :params {:track "love"}
     :oauth-creds (:oauth-creds client)
     ; TODO: real callbacks here
     :callbacks
@@ -62,8 +62,7 @@
     (println "Stopping twitter streaming ...")
     (twitter-streaming-stop @streamer)))
 
-
-; TODO:
 (defn twitter-puller-worker
   [component value callback]
-  )
+  (println " twitter streaming ..."))
+

@@ -6,16 +6,20 @@
 ;; Private
 ;;;;;;;;;;;;;;;
 (defn- listen
-  [component input-chan result-chan stop-chan work-fn]
+  [component input-chan result-chan ack-chan stop-chan work-fn]
   (async/go-loop []
     (async/alt!
       input-chan
-      ([result]
-       (println "Received work")
+      ([[delivery-tag result]]
+
+       (println "Received work ... calling handler")
        (work-fn
          component
          result
-         (fn callback-fn [value] (async/put! result-chan value)))
+         (fn callback-fn [value] (async/>! result-chan value)))
+
+       (println "Work done ... sending delivery-tag to ack")
+       (async/>! ack-chan delivery-tag)
        (recur))
 
       stop-chan
@@ -30,7 +34,7 @@
 ;; Component
 ;;;;;;;;;;;;;;;
 (defrecord Worker
-  [input-chan output-chan stop-chan work-fn]
+  [input-chan output-chan stop-chan ack-chan work-fn]
   component/Lifecycle
 
   (start [this]
@@ -38,6 +42,7 @@
       (listen this
               input-chan
               output-chan
+              ack-chan
               stop-chan
               work-fn)
       (assoc this
@@ -48,5 +53,6 @@
     (assoc this
            :input-chan nil
            :output-chan nil
+           :ack-chan nil
            :stop-chan nil
            :work-fn nil)))

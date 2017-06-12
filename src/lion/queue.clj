@@ -31,12 +31,12 @@
     queue-config))
 
 (defn- handler-wrapper
-  [channel handler]
+  [handler]
   (fn
     [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
     (let [payload-str (String. payload "UTF-8")
           data (cheshire/parse-string payload-str)]
-      (handler channel delivery-tag data))))
+      (handler delivery-tag data))))
 
 (defn- subscribe-to-queue
   [channel config handler]
@@ -44,10 +44,12 @@
     channel
     (:input-queue-name config)
     (:input-queue-config config))
+  ; TODO
+  (langohr.basic/qos channel 1)
   (langohr.consumers/subscribe
     channel
     (:input-queue-name config)
-    (handler-wrapper channel handler)
+    (handler-wrapper handler)
     {:auto-ack false}))
 
 (defn- publish-to-queue
@@ -57,21 +59,46 @@
     (:output-queue-name config)
     (:output-queue-config config))
 
+  ; TODO
   (langohr.basic/publish
     channel
     ""
     (:output-queue-name config)
     (cheshire/generate-string msg)))
 
-(defn- listen
-  [conn config incoming-chan outgoing-chan stop-chan]
+(defn- put-msgs-to-incoming-chan
+  [channel config incoming-chan]
   (subscribe-to-queue
-    (create-channel conn)
+    channel
     config
-    (fn message-handler [channel delivery-tag msg]
+    (fn message-handler [delivery-tag msg]
       (println "Received msg ... putting to incoming-chan")
-      (async/>!! incoming-chan msg)
-      (langohr.basic/ack channel delivery-tag)))
+      (async/>!! incoming-chan [delivery-tag msg]))))
+
+(defn- ack-msgs-from-ack-chan
+  [channel ack-chan]
+  (async/go-loop []
+    (let [delivery-tag (async/<!! ack-chan)]
+      (langohr.basic/ack channel delivery-tag)
+      (recur))))
+
+
+(defn- listen
+  [conn config incoming-chan outgoing-chan ack-chan stop-chan]
+
+  ; redirect to incoming-chan and
+  ; ack from ack-chan
+  (let [channel (create-channel conn)]
+    (put-msgs-to-incoming-chan
+      channel
+      config
+      incoming-chan)
+
+    (ack-msgs-from-ack-chan
+      channel
+      ack-chan))
+
+  ; publish messages
   (let [channel (create-channel conn)]
     (async/go-loop []
       (async/alt!
@@ -92,16 +119,17 @@
 ;; Component
 ;;;;;;;;;;;;;;;
 (defrecord Queue
-  [config incoming-chan outgoing-chan]
+  [config incoming-chan outgoing-chan ack-chan]
   component/Lifecycle
 
   (start [this]
     (let [conn (connect-to-queue config)
-          stop-chan (async/chan 1)]
+          stop-chan (async/chan)]
       (listen conn
               config
               incoming-chan
               outgoing-chan
+              ack-chan
               stop-chan)
       (assoc this
              :stop-chan stop-chan
@@ -115,4 +143,5 @@
            :config nil
            :incoming-chan nil
            :outgoing-chan nil
+           :ack-chan nil
            :stop-chan nil)))

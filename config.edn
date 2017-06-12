@@ -9,7 +9,7 @@
                         :output-queue-config {}}
 
  :twitter-streamer-queue {:input-queue-name "lion.twitter.streamer"
-                          :input-queue-config {}
+                          :input-queue-config {:durable true :auto-delete false}
                           :output-queue-name "lion.twitter.posts"
                           :output-queue-config {}}
 
